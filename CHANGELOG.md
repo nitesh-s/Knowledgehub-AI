@@ -4,6 +4,20 @@ All notable changes, fixes, and improvements are documented here.
 
 ---
 
+### Fix: Card component missing onClick prop
+
+- **File**: `frontend/components/ui/card.tsx`
+- **Problem**: TypeScript build error: `Property 'onClick' does not exist on type` when `admin/page.tsx` passes `onClick` to `Card`.
+- **Root Cause**: The `Card` component's props type only included `className` and `children`, but the admin page uses it as a clickable card with `onClick`.
+- **Fix**: Added `onClick?: React.MouseEventHandler<HTMLDivElement>` to the Card component's props type and passed it through to the underlying `<div>`.
+
+### Fix: Qdrant healthcheck using unavailable wget command
+
+- **File**: `docker-compose.yml` (qdrant service)
+- **Problem**: Docker marks qdrant as unhealthy and dependent containers fail to start. The container itself starts fine.
+- **Root Cause**: The healthcheck used `wget --spider http://localhost:6333/health`, but the `qdrant/qdrant` Docker image does **not** include `wget` or `curl`. The command fails immediately with "command not found".
+- **Fix**: Disabled the qdrant healthcheck entirely (`healthcheck: disable: true`). Changed backend and arq-worker `depends_on` for qdrant from `condition: service_healthy` to `condition: service_started`. The backend connects to qdrant lazily (only during document ingestion and queries), so it can tolerate a brief startup delay.
+
 ## 2026-07-03
 
 ### Fix: Missing PostCSS config for Tailwind v4
