@@ -22,7 +22,7 @@ export default function RegisterPage() {
       await api.post("/api/v1/auth/register", { email, username, password, full_name: fullName || null });
       toast.success("Account created. Please sign in.");
       router.push("/login");
-    } catch { toast.error("Registration failed"); }
+    } catch (err: any) { toast.error(err.message || "Registration failed"); }
     finally { setLoading(false); }
   };
 
