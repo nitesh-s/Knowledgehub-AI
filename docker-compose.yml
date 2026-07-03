@@ -1,0 +1,149 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: knowledgehub-postgres
+    environment:
+      POSTGRES_DB: knowledgehub
+      POSTGRES_USER: knowledgehub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U knowledgehub -d knowledgehub"]
+      interval: 10s; timeout: 5s; retries: 5
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: knowledgehub-qdrant
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    volumes: [qdrant_data:/qdrant/storage]
+    ports: ["6333:6333", "6334:6334"]
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:6333/health || exit 1
+      interval: 10s; timeout: 5s; retries: 5
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: knowledgehub-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes: [redis_data:/data]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s; timeout: 5s; retries: 5
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  backend:
+    build: {context: ./backend, dockerfile: Dockerfile}
+    container_name: knowledgehub-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://knowledgehub:${POSTGRES_PASSWORD:-changeme}@postgres:5432/knowledgehub
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      SECRET_KEY: ${SECRET_KEY:-changeme}; ALGORITHM: HS256; ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      ENVIRONMENT: development
+    ports: ["8000:8000"]
+    volumes: [./backend:/app, ./docker/backend/uploads:/app/uploads]
+    depends_on:
+      postgres: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  arq-worker:
+    build: {context: ./backend, dockerfile: Dockerfile}
+    container_name: knowledgehub-arq-worker
+    command: arq app.core.worker.WorkerSettings
+    environment:
+      DATABASE_URL: postgresql+asyncpg://knowledgehub:${POSTGRES_PASSWORD:-changeme}@postgres:5432/knowledgehub
+      REDIS_URL: redis://redis:6379/0; QDRANT_URL: http://qdrant:6333
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      SECRET_KEY: ${SECRET_KEY:-changeme}; PYTHONPATH: /app
+    volumes: [./backend:/app, ./docker/backend/uploads:/app/uploads]
+    depends_on:
+      postgres: {condition: service_healthy}
+      qdrant: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  frontend:
+    build: {context: ./frontend, dockerfile: Dockerfile}
+    container_name: knowledgehub-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+    ports: ["3000:3000"]
+    volumes: [./frontend:/app, /app/node_modules, /app/.next]
+    depends_on: [backend]
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: knowledgehub-nginx
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on: [frontend, backend]
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  phoenix:
+    image: arize/phoenix:latest
+    container_name: knowledgehub-phoenix
+    environment:
+      PHOENIX_SQL_DATABASE_URL: sqlite:///phoenix.db
+      PHOENIX_OTLP_ENABLED: "true"
+    ports: ["3001:6006"]
+    volumes: [phoenix_data:/phoenix/data]
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: knowledgehub-prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports: ["9090:9090"]
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: knowledgehub-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana_data:/var/lib/grafana
+    ports: ["3002:3000"]
+    depends_on: [prometheus]
+    networks: [knowledgehub-network]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:; qdrant_data:; redis_data:; prometheus_data:; grafana_data:; phoenix_data:
+
+networks:
+  knowledgehub-network:
+    driver: bridge
