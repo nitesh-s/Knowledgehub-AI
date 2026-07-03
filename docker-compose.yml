@@ -32,10 +32,11 @@ services:
       - "6333:6333"
       - "6334:6334"
     healthcheck:
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/6333"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
     networks:
       - knowledgehub-network
     restart: unless-stopped
