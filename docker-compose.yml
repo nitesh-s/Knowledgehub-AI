@@ -154,7 +154,7 @@ services:
       PHOENIX_SQL_DATABASE_URL: sqlite:///phoenix.db
       PHOENIX_OTLP_ENABLED: "true"
     ports:
-      - "3001:6006"
+      - "2001:6006"
     volumes:
       - phoenix_data:/phoenix/data
     networks:
