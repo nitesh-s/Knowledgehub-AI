@@ -11,6 +11,12 @@ All notable changes, fixes, and improvements are documented here.
 - **Root Cause**: The `Card` component's props type only included `className` and `children`, but the admin page uses it as a clickable card with `onClick`.
 - **Fix**: Added `onClick?: React.MouseEventHandler<HTMLDivElement>` to the Card component's props type and passed it through to the underlying `<div>`.
 
+### Fix: Frontend host port changed to 2002
+
+- **File**: `docker-compose.yml` (frontend service)
+- **Problem**: Port 3000 on the host was already allocated by another process, preventing the frontend container from starting.
+- **Fix**: Changed host port mapping from `3000:3000` to `2002:3000`.
+
 ### Fix: Qdrant healthcheck using unavailable wget command
 
 - **File**: `docker-compose.yml` (qdrant service)
