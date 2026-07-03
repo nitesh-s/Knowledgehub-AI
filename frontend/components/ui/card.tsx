@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("rounded-xl border border-border bg-card p-6", className)}>{children}</div>;
+export function Card({ className, children, onClick }: { className?: string; children: React.ReactNode; onClick?: React.MouseEventHandler<HTMLDivElement> }) {
+  return <div className={cn("rounded-xl border border-border bg-card p-6", className)} onClick={onClick}>{children}</div>;
 }
 export function CardTitle({ className, children }: { className?: string; children: React.ReactNode }) {
   return <h3 className={cn("text-lg font-semibold", className)}>{children}</h3>;
