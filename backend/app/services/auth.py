@@ -11,7 +11,10 @@ class AuthService:
         existing = await self.session.execute(select(User).where((User.email == email) | (User.username == username)))
         if existing.scalar_one_or_none():
             raise ValueError("Email or username already exists")
-        user = User(email=email, username=username, hashed_password=hash_password(password), full_name=full_name, role=UserRole.employee)
+        count = await self.session.execute(select(User))
+        is_first = count.scalar() is None
+        role = UserRole.admin if is_first else UserRole.employee
+        user = User(email=email, username=username, hashed_password=hash_password(password), full_name=full_name, role=role)
         self.session.add(user)
         await self.session.flush()
         return user
