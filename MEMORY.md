@@ -351,6 +351,25 @@ Registration and login silently fail or produce corrupted password hashes.
 
 ---
 
+---
+
+## 23. Admin health page linked to "#" — no route existed
+
+**Error**: Clicking "System Health" card in admin dashboard did nothing (stayed on same page).
+
+**Root cause**: The admin page at `frontend/app/admin/page.tsx:16` had `href: "#"` for both "System Settings" and "System Health" cards. The `onClick={() => router.push(href)}` with `href="#"` navigates to the current page URL with `#` appended, effectively a no-op. No `/admin/health` route existed.
+
+**Assumption**: Admin pages for health and settings would be built later, but `"#"` was used as a placeholder without even creating the route file. The user expected working navigation upon clicking the card.
+
+**Fix**: Created:
+- Backend: Enhanced `GET /api/v1/health/` to check Postgres, Redis, Qdrant, and Ollama connectivity
+- Frontend: Created `/admin/health` page with service status cards using `@tanstack/react-query` with 30s auto-refresh
+- Updated admin card href from `"#"` to `"/admin/health"`
+
+**Lesson**: Never use `"#"` as a placeholder href for navigation cards. Either create the target page, disable the card, or route to a proper "coming soon" page. Every clickable element in the UI should lead to a valid route.
+
+---
+
 ## Pre-Flight Checklist for Future Projects
 
 Before declaring a project "done" and running `docker compose build`, verify:

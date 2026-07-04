@@ -13,7 +13,7 @@ export default function AdminPage() {
     { label: "User Management", desc: "Manage users, roles, and permissions", icon: Users, href: "/admin/users" },
     { label: "Documents", desc: "Upload, rebuild embeddings, manage collections", icon: FileText, href: "/library" },
     { label: "System Settings", desc: "Model selection, prompt templates, configuration", icon: Settings, href: "#" },
-    { label: "System Health", desc: "Monitor services, view logs, inspect prompts", icon: Activity, href: "#" },
+    { label: "System Health", desc: "Monitor services, view logs, inspect prompts", icon: Activity, href: "/admin/health" },
   ];
   return (
     <AppShell>
