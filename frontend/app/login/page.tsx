@@ -24,7 +24,7 @@ export default function LoginPage() {
       const user = await api.get<any>("/api/v1/users/me");
       setAuth(access_token, user);
       router.push("/dashboard");
-    } catch { toast.error("Invalid credentials"); }
+    } catch (err: any) { toast.error(err.message || "Invalid credentials"); }
     finally { setLoading(false); }
   };
 

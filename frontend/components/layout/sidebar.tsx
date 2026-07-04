@@ -1,14 +1,13 @@
 "use client";
 import { useAuthStore } from "@/store/auth-store";
 import { useRouter, usePathname } from "next/navigation";
-import { MessageSquare, LayoutDashboard, Library, Settings, Users, BarChart3, LogOut } from "lucide-react";
+import { MessageSquare, LayoutDashboard, Library, Settings, Users, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chat", label: "AI Chat", icon: MessageSquare },
   { href: "/library", label: "Knowledge Library", icon: Library },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin", label: "Admin", icon: Settings, adminOnly: true },
   { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
 ];

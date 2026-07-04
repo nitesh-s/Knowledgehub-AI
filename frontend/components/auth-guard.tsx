@@ -7,7 +7,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const publicPaths = ["/login", "/register"];
-  const isPublic = publicPaths.includes(pathname);
+  const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + "?"));
   useEffect(() => {
     if (!isAuthenticated() && !isPublic) router.push("/login");
   }, [isAuthenticated, pathname, router, isPublic]);

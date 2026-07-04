@@ -370,20 +370,105 @@ Registration and login silently fail or produce corrupted password hashes.
 
 ---
 
+---
+
+## 24. Bulk fixes: comprehensive error sweep (July 4, 2026)
+
+The following 17 issues were identified and fixed in a single sweep:
+
+### 24a. Dashboard health display shows raw object
+**File**: `frontend/app/dashboard/page.tsx:44`
+**Error**: `Object.entries(health)` iterated `{status, services}` top-level keys, showing "services: [object Object]".
+**Fix**: Changed to `Object.entries(health.services)` and accessed `v.status` instead of `String(v)`.
+
+### 24b. Library upload button stuck on error
+**File**: `frontend/app/library/page.tsx:25`
+**Error**: `setUploading(false)` not in `finally` block — if upload threw, button stayed disabled forever.
+**Fix**: Wrapped `mutateAsync` in try/finally.
+
+### 24c. Library upload error message hardcoded
+**File**: `frontend/app/library/page.tsx:21`
+**Fix**: Changed `onError: () => toast.error("Upload failed")` to use `err.message`.
+
+### 24d. Library delete button does nothing
+**File**: `frontend/app/library/page.tsx:47`
+**Error**: `<Button>` had no `onClick` handler.
+**Fix**: Added `confirmDelete` function with confirmation dialog, wired to `onClick`. Created `POST /documents/{id}/delete` backend endpoint.
+
+### 24e. Login error message hardcoded
+**File**: `frontend/app/login/page.tsx:27`
+**Fix**: Changed `catch { toast.error("Invalid credentials") }` to show `err.message`.
+
+### 24f. Analytics sidebar link → 404
+**File**: `frontend/components/layout/sidebar.tsx:11`
+**Error**: `/analytics` route in nav but no page existed.
+**Fix**: Removed the nav item and its `BarChart3` import.
+
+### 24g. System Settings admin card → no-op
+**File**: `frontend/app/admin/page.tsx:15`
+**Error**: `href: "#"` caused `router.push("#")` which does nothing.
+**Fix**: Changed to `"/admin/settings"` and created `/admin/settings` page showing available Ollama models and configuration info.
+
+### 24h. api.upload error uses statusText instead of body
+**File**: `frontend/lib/api.ts:24`
+**Error**: `r.statusText` gives "Internal Server Error" — no detail.
+**Fix**: Changed to `await r.text()` to get the actual error body.
+
+### 24i. AuthGuard fails on query params
+**File**: `frontend/components/auth-guard.tsx:10`
+**Error**: `publicPaths.includes(pathname)` fails for `/register?ref=x`.
+**Fix**: Changed to `.some(p => pathname === p || pathname.startsWith(p + "?"))`.
+
+### 24j. Document upload: file.size can be None
+**File**: `backend/app/api/v1/documents.py:20`
+**Error**: `if file.size and ...` was truthy check — if `file.size` is `None` (missing Content-Length), check passes but `None > X` is invalid.
+**Fix**: Changed to `if not file.size or file.size > ...` to reject files with unknown size.
+
+### 24k. Document upload: department_id UUID crash
+**File**: `backend/app/api/v1/documents.py:23-26`
+**Error**: `uuid.UUID(department_id)` without try/except — invalid string causes 500.
+**Fix**: Wrapped in try/except, raised 422 on invalid UUID.
+
+### 24l. Document upload: MIME type never captured
+**File**: `backend/app/api/v1/documents.py:27`
+**Error**: `file.content_type` available but never read.
+**Fix**: Passed `file.content_type` as `mime_type` to `DocumentService.upload()`.
+
+### 24m. Document upload: ingestion never triggered
+**File**: `backend/app/api/v1/documents.py:28-33`
+**Error**: ARQ worker existed with `process_document` function but nothing ever enqueued a job. Documents stayed `pending` forever.
+**Fix**: Added `await pool.enqueue_job("process_document", str(doc.id))` after upload using `arq.connections.create_pool`.
+
+### 24n. Path traversal vulnerability in document upload
+**File**: `backend/app/services/document.py:16-17`
+**Error**: Filename used directly in `upload_path / filename` — `../../etc/passwd` could write outside uploads.
+**Fix**: Added `os.path.basename(filename)` to strip directory components.
+
+### 24o. Synchronous file write in async context
+**File**: `backend/app/services/document.py:17`, `backend/app/services/ingestion.py:14-16`
+**Error**: `file_path.write_bytes(content)` and `file_path.read_bytes()` block the event loop.
+**Fix**: Replaced with `aiofiles.open()` async file I/O.
+
+### 24p. Synchronous QdrantClient blocks event loop
+**Files**: `backend/app/services/ingestion.py:63-71`, `backend/app/rag/engine.py:19-23`
+**Error**: `QdrantClient` (sync) used inside async functions.
+**Fix**: Replaced with `AsyncQdrantClient` and added `await client.close()`.
+
+### 24q. Empty embeddings crash, hardcoded model name
+**File**: `backend/app/services/ingestion.py:19-20, 58`
+**Error**: `embeddings[0]` raises IndexError if Ollama returns empty list. Embedding model `"bge-m3"` hardcoded instead of using `settings.embedding_model`.
+**Fix**: Added `if not embeddings: raise ValueError(...)` check. Changed to `settings.embedding_model`.
+
+### 24r. No PDF parsing — binary treated as UTF-8 text
+**File**: `backend/app/services/ingestion.py:38-53`
+**Error**: `_chunk_content` decoded all bytes as UTF-8. PDFs are binary — output was corrupted replacement characters.
+**Fix**: Added `_extract_text` method that detects `application/pdf` mime type and uses `unstructured.partition.auto.partition()` for proper PDF text extraction. Falls back to UTF-8 decode for other types.
+
+### 24s. No model selector on chat page
+**File**: `frontend/app/chat/page.tsx`
+**Error**: Chat POST body had no `model` field — backend always used default `"llama3.1"`.
+**Fix**: Added model selector dropdown populated from health endpoint's Ollama model list. Sends `model` field in chat requests.
+
+---
+
 ## Pre-Flight Checklist for Future Projects
-
-Before declaring a project "done" and running `docker compose build`, verify:
-
-1. **`.gitignore`** — one pattern per line, no semicolons
-2. **PostCSS config** — present for any Tailwind v4 project
-3. **`NEXT_PUBLIC_*` vars** — set as Docker build args, values use server IP not `localhost`
-4. **Docker healthchecks** — commands exist in the target image
-5. **Volume mounts** — don't shadow build output
-6. **Python path** — `PYTHONPATH` set where needed
-7. **Alembic** — `alembic.ini` has all required fields; migrations runnable
-8. **Auth pages** — public pages whitelisted in AuthGuard
-9. **Error messages** — surface actual error, not generic fallback
-10. **SSH/PAT access** — tested before first push attempt
-11. **Port availability** — check host ports before `docker compose up`
-12. **`public/` dir** — exists for Next.js projects
-13. **Component props** — accept common HTML attributes like `onClick`

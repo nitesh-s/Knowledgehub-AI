@@ -21,6 +21,6 @@ export const api = {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    return fetch(`${API_BASE}${path}`, { method: "POST", headers, body: formData }).then(r => r.ok ? r.json() : Promise.reject(new ApiError(r.status, r.statusText))) as Promise<T>;
+    return fetch(`${API_BASE}${path}`, { method: "POST", headers, body: formData }).then(async r => r.ok ? r.json() : Promise.reject(new ApiError(r.status, await r.text()))) as Promise<T>;
   },
 };

@@ -18,12 +18,24 @@ export default function LibraryPage() {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => { const fd = new FormData(); fd.append("file", file); return api.upload<{ id: string }>("/api/v1/documents/upload", fd); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["documents"] }); toast.success("Document uploaded"); },
-    onError: () => toast.error("Upload failed"),
+    onError: (err: any) => toast.error(err.message || "Upload failed"),
   });
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    setUploading(true); await uploadMutation.mutateAsync(file); setUploading(false);
+    setUploading(true);
+    try { await uploadMutation.mutateAsync(file); }
+    finally { setUploading(false); }
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: (docId: string) => api.post(`/api/v1/documents/${docId}/delete`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["documents"] }); toast.success("Document deleted"); },
+    onError: (err: any) => toast.error(err.message || "Delete failed"),
+  });
+
+  const confirmDelete = (docId: string, filename: string) => {
+    if (window.confirm(`Delete "${filename}"?`)) deleteMutation.mutate(docId);
   };
   return (
     <AppShell>
@@ -44,7 +56,7 @@ export default function LibraryPage() {
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <div><p className="font-medium">{doc.original_filename}</p><p className="text-xs text-muted-foreground">{doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : "—"} · {doc.chunk_count} chunks · <span className={doc.status === "indexed" ? "text-green-600" : doc.status === "failed" ? "text-red-600" : "text-yellow-600"}>{doc.status}</span></p></div>
               </div>
-              <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => confirmDelete(doc.id, doc.original_filename)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
             </div>
           ))}</div>}
         </Card>

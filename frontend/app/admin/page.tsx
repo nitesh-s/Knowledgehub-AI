@@ -12,7 +12,7 @@ export default function AdminPage() {
   const cards = [
     { label: "User Management", desc: "Manage users, roles, and permissions", icon: Users, href: "/admin/users" },
     { label: "Documents", desc: "Upload, rebuild embeddings, manage collections", icon: FileText, href: "/library" },
-    { label: "System Settings", desc: "Model selection, prompt templates, configuration", icon: Settings, href: "#" },
+    { label: "System Settings", desc: "Model selection, prompt templates, configuration", icon: Settings, href: "/admin/settings" },
     { label: "System Health", desc: "Monitor services, view logs, inspect prompts", icon: Activity, href: "/admin/health" },
   ];
   return (

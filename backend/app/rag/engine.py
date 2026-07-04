@@ -14,13 +14,14 @@ class RAGEngine:
 
     async def _retrieve(self, question: str, filters: dict | None = None) -> list[dict]:
         embedding = await self._embed(question)
-        from qdrant_client import QdrantClient
+        from qdrant_client import AsyncQdrantClient
         from qdrant_client.http.models import Filter, FieldCondition, MatchValue
-        client = QdrantClient(url=self.qdrant_url)
+        client = AsyncQdrantClient(url=self.qdrant_url)
         search_filter = None
         if filters and filters.get("department_id"):
             search_filter = Filter(must=[FieldCondition(key="department_id", match=MatchValue(value=filters["department_id"]))])
-        results = client.search(collection_name="documents", query_vector=embedding, limit=5, query_filter=search_filter)
+        results = await client.search(collection_name="documents", query_vector=embedding, limit=5, query_filter=search_filter)
+        await client.close()
         return [{"text": r.payload.get("text", ""), "score": r.score, "document_id": r.payload.get("document_id")} for r in results]
 
     async def _embed(self, text: str) -> list[float]:

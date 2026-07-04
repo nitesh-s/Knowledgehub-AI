@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +15,16 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState("llama3.1");
   const bottomRef = useRef<HTMLDivElement>(null);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const { data: health } = useQuery({
+    queryKey: ["health"],
+    queryFn: () => api.get<{ services: Record<string, { models?: string[] }> }>("/api/v1/health/"),
+    staleTime: 60_000,
+  });
+  const availableModels = health?.services?.ollama?.models ?? [];
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -24,17 +33,26 @@ export default function ChatPage() {
     setInput("");
     setLoading(true);
     try {
-      const res = await api.post<{ conversation_id: string; content: string }>("/api/v1/chat/", { conversation_id: conversationId, message: userMsg.content });
+      const res = await api.post<{ conversation_id: string; content: string }>("/api/v1/chat/", { conversation_id: conversationId, message: userMsg.content, model: selectedModel });
       setConversationId(res.conversation_id);
       setMessages(p => [...p, { id: crypto.randomUUID(), role: "assistant", content: res.content }]);
-    } catch { toast.error("Failed to get response"); }
+    } catch (err: any) { toast.error(err.message || "Failed to get response"); }
     finally { setLoading(false); }
   };
 
   return (
     <AppShell>
       <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-4xl flex-col">
-        <div className="mb-4"><h1 className="text-2xl font-bold">AI Chat</h1><p className="text-sm text-muted-foreground">Ask questions about your knowledge base</p></div>
+        <div className="mb-4 flex items-center justify-between">
+          <div><h1 className="text-2xl font-bold">AI Chat</h1><p className="text-sm text-muted-foreground">Ask questions about your knowledge base</p></div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="model-select" className="text-sm text-muted-foreground">Model:</label>
+            <select id="model-select" value={selectedModel} onChange={e => setSelectedModel(e.target.value)}
+              className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+              {availableModels.length > 0 ? availableModels.map(m => <option key={m} value={m}>{m}</option>) : <option value="llama3.1">llama3.1</option>}
+            </select>
+          </div>
+        </div>
         <Card className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && !loading && (
