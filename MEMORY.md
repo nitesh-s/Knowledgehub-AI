@@ -316,6 +316,41 @@ sudo GIT_SSH_COMMAND="ssh -i /home/nitesh/.ssh/id_ed25519" git pull
 
 ---
 
+---
+
+## 21. passlib incompatible with bcrypt >= 4.1
+
+**Error**: Backend logs show:
+```
+WARNING:passlib.handlers.bcrypt:(trapped) error reading bcrypt version
+AttributeError: module 'bcrypt' has no attribute '__about__'
+```
+Registration and login silently fail or produce corrupted password hashes.
+
+**Root cause**: `passlib` uses `bcrypt.__about__` to detect the bcrypt version. The `bcrypt` library removed `__about__` in version 4.1. `requirements.txt` had `passlib[bcrypt]>=1.7.4` which pulls in the latest `bcrypt`, but nothing pinned it below 4.1.
+
+**Assumption**: `passlib[bcrypt]` would pull a compatible version of `bcrypt`. In reality, pip installs the latest `bcrypt` regardless of passlib's requirements.
+
+**Fix**: Added `bcrypt>=4.0.0,<4.1.0` to `requirements.txt` to pin below the breaking version.
+
+**Lesson**: When using `passlib[bcrypt]`, always pin `bcrypt` explicitly. The extra `[bcrypt]` does NOT constrain the bcrypt version. Check the passlib changelog for bcrypt compatibility before each upgrade.
+
+---
+
+## 22. Token not stored before /users/me call in login flow
+
+**Error**: Login returns HTTP 200 with a valid token, but immediately redirects back to login page. Backend logs show `POST /auth/login` → 200, then `GET /users/me` → 401.
+
+**Root cause**: The login page stores the token in localStorage via `setAuth()` **after** calling `/api/v1/users/me`. The `api.ts` request function reads the token from `localStorage.getItem("token")`, which is still `null` during the `/users/me` call. The request goes out without an `Authorization` header, so the backend returns 401.
+
+**Assumption**: `setAuth()` was called before the `/users/me` fetch, so the token would be available. In reality, the token variable existed but wasn't persisted to localStorage yet.
+
+**Fix**: Added `localStorage.setItem("token", access_token)` before the `/api/v1/users/me` call in `frontend/app/login/page.tsx`.
+
+**Lesson**: After any API call that returns a token, persist it to localStorage immediately before making any subsequent authenticated requests. The `api.ts` client reads from localStorage on every call — it does not accept a token parameter.
+
+---
+
 ## Pre-Flight Checklist for Future Projects
 
 Before declaring a project "done" and running `docker compose build`, verify:

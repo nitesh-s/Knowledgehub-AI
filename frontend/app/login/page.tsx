@@ -20,6 +20,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const { access_token } = await api.post<{ access_token: string }>("/api/v1/auth/login", { email, password });
+      localStorage.setItem("token", access_token);
       const user = await api.get<any>("/api/v1/users/me");
       setAuth(access_token, user);
       router.push("/dashboard");
