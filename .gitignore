@@ -21,6 +21,8 @@ npm-debug.log*
 Thumbs.db
 # Docker
 .docker/
+# Uploads
+docker/backend/uploads/
 # Testing
 .pytest_cache/
 htmlcov/
