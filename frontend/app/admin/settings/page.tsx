@@ -5,7 +5,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/store/auth-store";
 import { api } from "@/lib/api";
-import { Settings, Cpu } from "lucide-react";
+import { Cpu } from "lucide-react";
 
 export default function AdminSettingsPage() {
   const { user } = useAuthStore();

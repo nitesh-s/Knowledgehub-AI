@@ -39,7 +39,7 @@ export default function AdminHealthPage() {
           <div className="grid gap-4 md:grid-cols-2">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 w-full" />)}</div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {data?.services && Object.entries(data.services).map(([name, svc]) => {
+            {data?.services && Object.entries(data.services as Record<string, { status: string; message: string; models?: string[] }>).map(([name, svc]) => {
               const isHealthy = svc.status === "healthy";
               return (
                 <Card key={name}>
