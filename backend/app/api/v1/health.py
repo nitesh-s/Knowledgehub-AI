@@ -32,10 +32,10 @@ async def check_redis() -> dict:
 async def check_qdrant() -> dict:
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            r = await client.get(f"{settings.qdrant_url}/health")
-        return {"status": "healthy" if r.is_success else "unhealthy", "message": r.status_code if not r.is_success else "Connected"}
+            r = await client.get(f"{settings.qdrant_url}/healthz")
+        return {"status": "healthy" if r.is_success else "unhealthy", "message": "Connected" if r.is_success else f"HTTP {r.status_code}"}
     except Exception as e:
-        return {"status": "unhealthy", "message": str(e)}
+        return {"status": "unhealthy", "message": f"Connection failed: {e}"}
 
 
 async def check_ollama() -> dict:
@@ -47,7 +47,7 @@ async def check_ollama() -> dict:
                 return {"status": "healthy", "message": f"Available: {', '.join(models) if models else 'no models found'}", "models": models}
             return {"status": "unhealthy", "message": f"HTTP {r.status_code}"}
     except Exception as e:
-        return {"status": "unhealthy", "message": str(e)}
+        return {"status": "unhealthy", "message": f"Connection failed: {e}"}
 
 
 @router.get("/")
@@ -55,4 +55,5 @@ async def health_check():
     postgres, redis_, qdrant, ollama = await asyncio.gather(check_postgres(), check_redis(), check_qdrant(), check_ollama())
     services = {"postgres": postgres, "redis": redis_, "qdrant": qdrant, "ollama": ollama}
     overall = "healthy" if all(s["status"] == "healthy" for s in services.values()) else "degraded"
-    return {"status": overall, "services": services}
+    unhealthy = [name for name, s in services.items() if s["status"] != "healthy"]
+    return {"status": overall, "services": services, "details": f"Unhealthy services: {', '.join(unhealthy)}" if unhealthy else "All services healthy"}
