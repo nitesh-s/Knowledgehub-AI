@@ -17,7 +17,7 @@ async def process_document(ctx, document_id: str):
             return {"error": "Document not found"}
         service = IngestionService()
         await service.process_document(document)
-        await session.flush()
+        await session.commit()
         return {"status": "processed", "document_id": document_id}
 
 
