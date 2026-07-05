@@ -59,10 +59,17 @@ The `api.ts` client reads tokens from `localStorage.getItem("token")`. Never cal
 - PAT URL pushes from this workspace, revert to SSH after push
 - Server IP: `192.168.3.118`
 
-### 12. Before Declaring Done
+### 12. TypeScript Compilation Check
+- After any frontend change, run `npx tsc --noEmit` (or `npm run build`) locally or verify with the TypeScript language server
+- Strict mode is enabled (`strict: true` in tsconfig.json) — `Object.entries()` returns `[string, unknown][]` not inferred types
+- Cast with `as Record<string, T>` or declare explicit types for API response data
+- Never rely on visual code review alone for type safety
+
+### 13. Before Declaring Done
 1. [ ] Trace the full request lifecycle end-to-end
 2. [ ] Check state timing (storage before access)
 3. [ ] Verify token/Auth header propagation
 4. [ ] Check frontend rebuild requirement
 5. [ ] Check backend dependency rebuild requirement
-6. [ ] Run `docker compose build` for affected services
+6. [ ] Run TypeScript compilation for frontend changes
+7. [ ] Run `docker compose build` for affected services

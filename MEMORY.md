@@ -471,4 +471,18 @@ The following 17 issues were identified and fixed in a single sweep:
 
 ---
 
+## 25. TypeScript strict mode type error missed after review
+
+**Error**: Frontend build failed after deployment — `Type error: 'v' is of type 'unknown'` in `dashboard/page.tsx:45`.
+
+**Root cause**: TypeScript strict mode (`strict: true` in tsconfig.json) means `Object.entries()` returns `[string, unknown][]`, not inferred types. The code accessed `v.status` but `v` was typed `unknown`. I visually reviewed the code but never ran the TypeScript compiler to verify type safety.
+
+**Assumption**: Visual code review was sufficient to catch all errors. In reality, strict TypeScript catches type-level issues invisible during reading.
+
+**Fix**: Added type assertion `as Record<string, { status: string }>` to the `Object.entries()` call.
+
+**Lesson**: Never rely on visual code review alone for TypeScript strict mode projects. Always run `npx tsc --noEmit` or trigger a build to verify type safety after every frontend change. Add this as a mandatory step in the pre-flight checklist.
+
+---
+
 ## Pre-Flight Checklist for Future Projects
