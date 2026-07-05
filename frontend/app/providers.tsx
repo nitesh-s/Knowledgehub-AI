@@ -9,7 +9,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthGuard>{children}</AuthGuard>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" duration={2000} />
     </QueryClientProvider>
   );
 }
