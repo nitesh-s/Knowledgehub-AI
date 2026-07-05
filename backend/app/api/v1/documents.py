@@ -8,7 +8,7 @@ from app.schemas.document import DocumentResponse, DocumentUploadResponse
 from app.core.dependencies import get_current_user
 from app.services.document import DocumentService
 from app.config import get_settings
-from arq.connections import create_pool
+from arq.connections import create_pool, RedisSettings
 import uuid
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -26,7 +26,7 @@ async def upload_document(file: UploadFile = File(...), department_id: str | Non
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid department_id")
     doc = await DocumentService(session).upload(filename=file.filename or "untitled", content=content, mime_type=file.content_type, user_id=current_user.id, department_id=dept_uuid)
     try:
-        pool = await create_pool(settings.redis_url)
+        pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         await pool.enqueue_job("process_document", str(doc.id))
         await pool.close()
     except Exception:

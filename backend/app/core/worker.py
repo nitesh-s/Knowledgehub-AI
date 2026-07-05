@@ -1,5 +1,6 @@
 from app.config import get_settings
 from app.services.ingestion import IngestionService
+from arq.connections import RedisSettings
 
 settings = get_settings()
 
@@ -21,7 +22,7 @@ async def process_document(ctx, document_id: str):
 
 
 class WorkerSettings:
-    redis_settings = settings.redis_url
+    redis_settings = RedisSettings.from_dsn(settings.redis_url)
     functions = [process_document]
     poll_delay = 1.0
     max_jobs = 5
