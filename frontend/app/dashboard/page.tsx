@@ -41,7 +41,7 @@ export default function DashboardPage() {
           </Card>
           <Card><CardTitle>System Health</CardTitle>
             <div className="mt-4 space-y-2 text-sm">
-              {health?.services ? Object.entries(health.services).map(([k, v]) => (
+              {health?.services ? Object.entries(health.services as Record<string, { status: string }>).map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between"><span className="capitalize">{k}</span><span className={v.status === "healthy" ? "text-green-600" : "text-red-600"}>{v.status}</span></div>
               )) : <Skeleton className="h-24 w-full" />}
             </div>
