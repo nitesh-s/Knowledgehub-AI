@@ -9,10 +9,11 @@ from app.core.dependencies import get_current_user
 from app.services.document import DocumentService
 from app.config import get_settings
 from arq.connections import create_pool, RedisSettings
-import uuid
+import uuid, logging
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
@@ -29,8 +30,8 @@ async def upload_document(file: UploadFile = File(...), department_id: str | Non
         pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         await pool.enqueue_job("process_document", str(doc.id))
         await pool.close()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Failed to enqueue document processing job: %s", e)
     return DocumentUploadResponse(id=doc.id, filename=doc.filename, status=doc.status)
 
 
