@@ -40,7 +40,7 @@ async def list_documents(current_user: User = Depends(get_current_user), session
     return list(result.scalars().all())
 
 
-@router.post("/{document_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{document_id}/delete")
 async def delete_document(document_id: str, current_user: User = Depends(get_current_user), session: AsyncSession = Depends(get_session)):
     try:
         uid = uuid.UUID(document_id)
@@ -51,7 +51,7 @@ async def delete_document(document_id: str, current_user: User = Depends(get_cur
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     await session.delete(doc)
-    return None
+    return {"ok": True}
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
